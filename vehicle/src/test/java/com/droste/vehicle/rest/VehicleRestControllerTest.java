@@ -1,9 +1,15 @@
 package com.droste.vehicle.rest;
 
+import static com.droste.vehicle.rest.SessionRestControllerTest.OLDEST;
+import static com.droste.vehicle.rest.SessionRestControllerTest.SESSION_ID;
+import static com.droste.vehicle.rest.SessionRestControllerTest.SESSION_ID2;
+import static com.droste.vehicle.rest.SessionRestControllerTest.TIMESTAMP;
+import static com.droste.vehicle.rest.SessionRestControllerTest.VIN;
+import static com.droste.vehicle.rest.SessionRestControllerTest.VIN2;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static com.droste.vehicle.rest.SessionRestControllerTest.*;
+import static org.junit.Assert.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -29,7 +35,6 @@ import org.springframework.mock.http.MockHttpOutputMessage;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.droste.vehicle.VehicleApplication;
@@ -78,9 +83,12 @@ public class VehicleRestControllerTest {
 	@Before
 	public void setup() throws Exception {
 		this.mockMvc = webAppContextSetup(webApplicationContext).build();
+
 		this.testVehicle = vehicleRepository.save(new Vehicle(VIN));
+
 		Session session = new Session(SESSION_ID, TIMESTAMP, testVehicle);
 		session = sessionRepository.save(session);
+
 		this.testPosition = new Position(TIMESTAMP, 48.1167D, 11.5400D, 252, session);
 		positionRepository.save(testPosition);
 	}
@@ -90,15 +98,6 @@ public class VehicleRestControllerTest {
 		this.positionRepository.deleteAllInBatch();
 		this.sessionRepository.deleteAllInBatch();
 		this.vehicleRepository.deleteAllInBatch();
-	}
-
-	@Test
-	public void testJPA() {
-		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
-		List<Session> sessions = vehicle.getSessions();
-		assertEquals(1, sessions.size());
-		assertEquals(SESSION_ID, sessions.get(0).getSessionId());
-
 	}
 
 	@Test
@@ -113,64 +112,109 @@ public class VehicleRestControllerTest {
 
 	@Test
 	public void getVehicle() throws Exception {
-		MvcResult result = mockMvc.perform(get("/vehicle/" + VIN)).andExpect(status().isOk())
-				.andExpect(content().contentType(contentType)).andExpect(jsonPath("$.id", is(VIN)))
-				.andExpect(jsonPath("$.sessions[0].sessionId", is(SESSION_ID))).andReturn();
-		System.out.println("------------" + result.getResponse().getContentAsString());
-		// "sessions":[{"sessionId":"6bc6a660dfef4010ded079865f358e30","timestamp":1519990621975}],"id":"WLQBNAL7EM14E3N"
+		mockMvc.perform(get("/vehicle/" + VIN)).andExpect(status().isOk()).andExpect(content().contentType(contentType))
+				.andExpect(jsonPath("$.id", is(VIN))).andExpect(jsonPath("$.sessions[0].sessionId", is(SESSION_ID)));
 	}
 
 	@Test
 	public void getLastPosition() throws Exception {
-		MvcResult result = mockMvc.perform(get("/vehicle/" + VIN + "/position/latest")).andExpect(status().isOk())
-				.andExpect(content().contentType(contentType)).andExpect(jsonPath("$.timestamp", is(TIMESTAMP)))
-				.andReturn();
-		System.out.println("PositionResponse" + result.getResponse().getContentAsString());
+		mockMvc.perform(get("/vehicle/" + VIN + "/position/latest")).andExpect(status().isOk())
+				.andExpect(content().contentType(contentType)).andExpect(jsonPath("$.timestamp", is(TIMESTAMP)));
 	}
 
+	/**
+	 * add a existing position to existing session and vehicle
+	 */
+	@Test
+	public void postDuplicatePosition() throws Exception {
+		String content = json(testPosition);
+		this.mockMvc.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID + "/position").contentType(contentType)
+				.content(content)).andExpect(status().isConflict());
+		
+		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
+		assertThat(vehicle.getId(), is(VIN));
+		assertThat(vehicle.getSessions().size(), is(1));
+		
+		Session session = vehicle.getSessions().get(0);
+		assertThat(session.getSessionId(), is(SESSION_ID));
+		assertThat(session.getTimestamp(), is(testPosition.getTimestamp()));
+		
+		List<Position> positions = this.positionRepository.findAllBySessionSessionId(SESSION_ID);
+		assertThat(positions.size(), is(1));
+		assertThat(positions.get(0).getTimestamp(), is(testPosition.getTimestamp()));
+	}
+
+	/**
+	 * add a new position to existing session and vehicle
+	 */
 	@Test
 	public void postNewPosition() throws Exception {
-		String content = json(testPosition);
-		System.out.println("------------CONTENT--------" + content);
+		Position testPosition2 = new Position(OLDEST, 48.1167D, 11.5394D, 291,
+				this.sessionRepository.findOne(SESSION_ID));
+		String content = json(testPosition2);
 		this.mockMvc.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID + "/position").contentType(contentType)
 				.content(content)).andExpect(status().isCreated());
+
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
-		assertEquals(vehicle.getId(), VIN);
-		assertEquals(vehicle.getSessions().size(), 1);
-		assertEquals(vehicle.getSessions().get(0).getSessionId(), SESSION_ID);
-		assertEquals(vehicle.getSessions().get(0).getTimestamp(), testPosition.getTimestamp());
-		assertEquals(vehicle.getSessions().get(0).getPositions().size(), 1);
-		assertEquals(vehicle.getSessions().get(0).getPositions().get(0).getTimestamp(), testPosition.getTimestamp());
+		assertThat(vehicle.getId(), is(VIN));
+		assertThat(vehicle.getSessions().size(), is(1));
+		
+		Session session = vehicle.getSessions().get(0);
+		assertThat(session.getSessionId(), is(SESSION_ID));
+		assertThat(session.getTimestamp(), is(testPosition.getTimestamp()));
+		
+		List<Position> positions = this.positionRepository.findAllBySessionSessionId(SESSION_ID);
+		assertThat(positions.size(), is(2));
+		assertThat(positions.get(0).getTimestamp(), is(testPosition.getTimestamp()));
+		assertThat(positions.get(1).getTimestamp(), is(OLDEST));
 	}
-	
+
+	/**
+	 * add a new position, neither session nor vehicle exist
+	 */
 	@Test
 	public void postNewVehicle() throws Exception {
-		Position testPosition2 = new Position(OLDEST, 48.1167D, 11.5394D, 291);
+		Vehicle vehicle2 = new Vehicle(VIN2, SESSION_ID2);
+		Position testPosition2 = new Position(OLDEST, 48.1167D, 11.5394D, 291, vehicle2.getSession(SESSION_ID2));
 		String content = json(testPosition2);
-		System.out.println("------------CONTENT--------" + content);
-		this.mockMvc.perform(post("/vehicle/" + VIN2+ "/session/" + SESSION_ID2 + "/position").contentType(contentType)
+		this.mockMvc.perform(post("/vehicle/" + VIN2 + "/session/" + SESSION_ID2 + "/position").contentType(contentType)
 				.content(content)).andExpect(status().isCreated());
+
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN2);
-		assertEquals(vehicle.getSessions().size(), 1);
-		assertEquals(vehicle.getSessions().get(0).getSessionId(), SESSION_ID2);
-		assertEquals(vehicle.getSessions().get(0).getTimestamp(), testPosition.getTimestamp());
-		assertEquals(vehicle.getSessions().get(0).getPositions().size(), 1);
-		assertEquals(vehicle.getSessions().get(0).getPositions().get(0).getTimestamp(), testPosition.getTimestamp());
+		assertThat(vehicle.getSessions().size(), is(1));
+		
+		Session session = vehicle.getSessions().get(0);
+		assertEquals(session.getSessionId(), SESSION_ID2);
+		assertEquals(session.getTimestamp(), OLDEST);
+		
+		// get Positions only on explicit request - performance!
+		List<Position> positions = positionRepository.findAllBySessionSessionId(SESSION_ID2);
+		assertEquals(positions.size(), 1);
+		assertEquals(positions.get(0).getTimestamp(), OLDEST);
 	}
-	
+
+	/**
+	 * add a new position, session is new, vehicle exists
+	 */
 	@Test
 	public void postNewSession() throws Exception {
-		String content = json(testPosition);
-		System.out.println("------------CONTENT--------" + content);
-		this.mockMvc.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID + "asdf/position").contentType(contentType)
+		Session session2 = new Session(SESSION_ID2, testVehicle);
+		Position testPosition2 = new Position(OLDEST, 48.1167D, 11.5394D, 291, session2);
+		String content = json(testPosition2);
+		this.mockMvc.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID2 + "/position").contentType(contentType)
 				.content(content)).andExpect(status().isCreated());
+		
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
 		assertEquals(vehicle.getId(), VIN);
-		assertEquals(vehicle.getSessions().size(), 1);
-		assertEquals(vehicle.getSessions().get(0).getSessionId(), SESSION_ID);
-		assertEquals(vehicle.getSessions().get(0).getTimestamp(), testPosition.getTimestamp());
-		assertEquals(vehicle.getSessions().get(0).getPositions().size(), 1);
-		assertEquals(vehicle.getSessions().get(0).getPositions().get(0).getTimestamp(), testPosition.getTimestamp());
+		assertEquals(vehicle.getSessions().size(), 2);
+		
+		Session session = vehicle.getSessions().get(1);
+		assertEquals(session.getSessionId(), SESSION_ID2);
+		assertEquals(session.getTimestamp(), OLDEST);
+		
+		List<Position> positions = positionRepository.findAllBySessionSessionId(SESSION_ID2);
+		assertEquals(positions.size(), 1);
+		assertEquals(positions.get(0).getTimestamp(), OLDEST);
 	}
 
 	@SuppressWarnings("unchecked")

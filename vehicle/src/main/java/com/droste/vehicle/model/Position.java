@@ -1,20 +1,29 @@
 package com.droste.vehicle.model;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = { "timestamp", "sessionId" }) })
 public class Position {
 
-	@Id //TODO wrong, use combined key with sessionid (extra class) or introduce ID.
+	@JsonIgnore
+	@Id
+	@GeneratedValue
+	private Long id;
+
 	private long timestamp;
 
 	@JsonIgnore
-	@ManyToOne(cascade = CascadeType.ALL)
+	@ManyToOne
+	@JoinColumn(name = "sessionId")
 	private Session session;
 
 	private double latitude;

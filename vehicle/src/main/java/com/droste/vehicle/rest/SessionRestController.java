@@ -44,7 +44,7 @@ public class SessionRestController {
 	/**
 	 * Get a single session as an ordered list of the received positions by
 	 * timestamp <br>
-	 * TODO is this too dirty? consistent but inconvenient would be
+	 * TODO a bit dirty: consistent but inconvenient would be
 	 * /vehicle/{vehicleId}/session...
 	 */
 	@GetMapping("/vehicle/session/{sessionId}")

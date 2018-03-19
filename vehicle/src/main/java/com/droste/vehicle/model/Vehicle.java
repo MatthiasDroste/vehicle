@@ -1,7 +1,9 @@
 package com.droste.vehicle.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
@@ -14,10 +16,16 @@ public class Vehicle {
 	@Id
 	private String vin;
 
-	@OneToMany(mappedBy = "vehicle", fetch = FetchType.EAGER)//, cascade=CascadeType.ALL)
+	@OneToMany(mappedBy = "vehicle", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@OrderBy("timestamp DESC")
-	private List<Session> sessions;
-	
+	private List<Session> sessions = new ArrayList<>();
+
+	public Vehicle(String vin, String sessionId) {
+		super();
+		this.vin = vin;
+		sessions.add(new Session(sessionId, this));
+	}
+
 	public Vehicle(String vin) {
 		super();
 		this.vin = vin;
@@ -38,14 +46,19 @@ public class Vehicle {
 	public void setSessions(List<Session> sessions) {
 		this.sessions = sessions;
 	}
+	
+	public void addSession(Session session) {
+		this.sessions.add(session);
+	}
+	
 
 	public Session getSession(String sessionId) {
 		for (Session session : getSessions()) {
-			if (session.getSessionId() == sessionId) {
+			if (session.getSessionId().equals(sessionId)) {
 				return session;
 			}
 		}
-		return new Session(sessionId);
+		return null;
 
 	}
 
@@ -53,6 +66,7 @@ public class Vehicle {
 	@SuppressWarnings("unused")
 	private Vehicle() {
 	}
+
 	@Override
 	public String toString() {
 		return "Vehicle [vin=" + vin + ", sessions=" + sessions + "]";

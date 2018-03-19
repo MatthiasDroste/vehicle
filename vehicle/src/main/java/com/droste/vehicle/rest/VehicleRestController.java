@@ -4,16 +4,16 @@ import java.net.URI;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.droste.vehicle.exception.DuplicatePositionException;
 import com.droste.vehicle.exception.VehicleNotFoundException;
 import com.droste.vehicle.model.Position;
 import com.droste.vehicle.model.PositionRepository;
@@ -52,10 +52,6 @@ public class VehicleRestController {
 		List<Session> sessions = vehicle.getSessions();
 		Session latestSession = sessions.stream().min((s1, s2) -> Long.compare(s1.getTimestamp(), s2.getTimestamp()))
 				.get();
-		// Position position =
-		// this.positionRepository.findByTimestampAndSession(latestSession.getTimestamp(),
-		// latestSession);
-		// latestSession.addPosition(position);
 		return latestSession.getPositions().get(0);
 	}
 
@@ -70,23 +66,32 @@ public class VehicleRestController {
 	 * new vehicles or sessions are created on the fly
 	 */
 	@PostMapping("/vehicle/{vehicleId}/session/{sessionId}/position")
-	ResponseEntity<?> add(@PathVariable String vehicleId, @PathVariable String sessionId, @RequestBody Position input) {
-		Vehicle vehicle = retrieveVehicle(vehicleId, sessionId);
-		 vehicle.getSession(sessionId).addPosition(input);
+	ResponseEntity<?> add(@PathVariable String vehicleId, @PathVariable String sessionId,
+			@RequestBody Position position) {
+		Vehicle vehicle = findOrCreateVehicleAndSession(vehicleId, sessionId);
+		Session session = vehicle.getSession(sessionId);
+		session.addPosition(position);
 		this.vehicleRepository.save(vehicle);
 
+		position.setSession(session);
+		try {
+			this.positionRepository.save(position);
+		} catch (DataIntegrityViolationException ex) {
+			throw new DuplicatePositionException(position);
+		}
+
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}")
-				.buildAndExpand(input.getTimestamp()).toUri();
+				.buildAndExpand(position.getTimestamp()).toUri();
 
 		return ResponseEntity.created(location).build();
 	}
 
-	private Vehicle retrieveVehicle(String vehicleId, String sessionId) {
+	private Vehicle findOrCreateVehicleAndSession(String vehicleId, String sessionId) {
 		Vehicle vehicle = this.vehicleRepository.findOne(vehicleId);
-		if (vehicle == null)
-		{
-//			Session session = new Session(sessionId);
-			Vehicle vehicle2 = new Vehicle(vehicleId);
+		if (vehicle == null) {
+			vehicle = new Vehicle(vehicleId, sessionId);
+		} else if (vehicle.getSession(sessionId) == null) {
+			vehicle.addSession(new Session(sessionId, vehicle));
 		}
 		return vehicle;
 	}

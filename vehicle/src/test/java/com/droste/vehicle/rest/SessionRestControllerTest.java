@@ -1,7 +1,7 @@
 package com.droste.vehicle.rest;
 
-import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,11 +12,8 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppC
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
-import static org.hamcrest.Matchers.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,8 +28,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.droste.vehicle.VehicleApplication;
@@ -62,13 +57,11 @@ public class SessionRestControllerTest {
 
 	private MockMvc mockMvc;
 
+	@SuppressWarnings("rawtypes")
 	private HttpMessageConverter mappingJackson2HttpMessageConverter;
 
 	private Position testPosition;
 	private Vehicle testVehicle;
-	private Session session;
-
-	private List<Position> positionList = new ArrayList<>();
 
 	@Autowired
 	private WebApplicationContext webApplicationContext;
@@ -117,26 +110,22 @@ public class SessionRestControllerTest {
 	public void tearDown() throws Exception {
 		this.positionRepository.deleteAllInBatch();
 		this.sessionRepository.deleteAllInBatch();
-		// this.vehicleRepository.deleteAllInBatch();
 	}
 
 	/** get all sessions of a vehicle in correct ordering */
 	@Test
 	public void getAllSessions() throws Exception {
-		MvcResult result = mockMvc.perform(get("/vehicle/" + VIN + "/session")).andExpect(status().isOk())
+		mockMvc.perform(get("/vehicle/" + VIN + "/session")).andExpect(status().isOk())
 				.andExpect(content().contentType(contentType)).andExpect(jsonPath("$", hasSize(2)))
 				.andExpect(jsonPath("$[0].positions", hasSize(3))).andExpect(jsonPath("$[0].sessionId", is(SESSION_ID)))
 				.andExpect(jsonPath("$[0].positions[0].timestamp", is(RECENT)))
 				.andExpect(jsonPath("$[0].positions[1].timestamp", is(MIDDLE)))
-				.andExpect(jsonPath("$[0].positions[2].timestamp", is(OLDEST))).andReturn();
-		System.out.println("------------" + result.getResponse().getContentAsString());
+				.andExpect(jsonPath("$[0].positions[2].timestamp", is(OLDEST)));
 	}
 
 	@Test
 	public void getAllSessionsVehicleNotFound() throws Exception {
-		MvcResult result = mockMvc.perform(get("/vehicle/" + "wrongVIN" + "/session")).andExpect(status().isNotFound())
-				.andReturn();
-		System.out.println("NoVehicleFound------------" + result.getResponse().getContentAsString());
+		mockMvc.perform(get("/vehicle/" + "wrongVIN" + "/session")).andExpect(status().isNotFound()).andReturn();
 	}
 
 	/**
@@ -145,14 +134,12 @@ public class SessionRestControllerTest {
 	 */
 	@Test
 	public void getPositionsOfSession() throws Exception {
-		MvcResult result = mockMvc.perform(get("/vehicle/session/" + SESSION_ID)).andExpect(status().isOk())
+		mockMvc.perform(get("/vehicle/session/" + SESSION_ID)).andExpect(status().isOk())
 				.andExpect(content().contentType(contentType)).andExpect(jsonPath("$.sessionId", is(SESSION_ID)))
 				.andExpect(jsonPath("$.positions", hasSize(3)))
 				.andExpect(jsonPath("$.positions[0].timestamp", is(RECENT)))
 				.andExpect(jsonPath("$.positions[1].timestamp", is(MIDDLE)))
-				.andExpect(jsonPath("$.positions[2].timestamp", is(OLDEST))).andReturn();
-		// TODO die 404 könnte text vertragen.
-		System.out.println("NosessionFound------------" + result.getResponse().getContentAsString());
+				.andExpect(jsonPath("$.positions[2].timestamp", is(OLDEST)));
 	}
 
 	@Test
@@ -162,6 +149,7 @@ public class SessionRestControllerTest {
 		System.out.println("Positions of Sessions------------" + result.getResponse().getContentAsString());
 	}
 
+	@SuppressWarnings("unchecked")
 	protected String json(Object o) throws IOException {
 		MockHttpOutputMessage mockHttpOutputMessage = new MockHttpOutputMessage();
 		this.mappingJackson2HttpMessageConverter.write(o, MediaType.APPLICATION_JSON, mockHttpOutputMessage);

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -18,15 +17,15 @@ public class Session {
 	@Id
 	private String sessionId;
 
-	private long timestamp;
+	private long timestamp = 0L;
 
 	@JsonIgnore
-	@ManyToOne // (cascade=CascadeType.ALL)
+	@ManyToOne
 	private Vehicle vehicle;
 
-	@OneToMany(mappedBy = "session", fetch = FetchType.LAZY)
-	@OrderBy("timestamp DESC") // TODO or on the getPositions?
-	private List<Position> positions;
+	@OneToMany(mappedBy = "session")
+	@OrderBy("timestamp DESC")
+	private List<Position> positions = new ArrayList<>();
 
 	public Session(String sessionId, long timestamp, Vehicle vehicle) {
 		super();
@@ -35,10 +34,10 @@ public class Session {
 		this.vehicle = vehicle;
 	}
 
-	public Session(String sessionId) {
+	public Session(String sessionId, Vehicle vehicle) {
 		super();
 		this.sessionId = sessionId;
-		this.positions = new ArrayList<Position>();
+		this.vehicle = vehicle;
 	}
 
 	public List<Position> getPositions() {
@@ -75,7 +74,8 @@ public class Session {
 
 	public void addPosition(Position input) {
 		positions.add(input);
-		this.timestamp = input.getTimestamp();
+		if (this.timestamp < input.getTimestamp())
+			this.timestamp = input.getTimestamp();
 	}
 
 	/** needed for JPA only */
