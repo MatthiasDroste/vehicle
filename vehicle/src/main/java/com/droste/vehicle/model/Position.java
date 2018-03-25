@@ -40,6 +40,14 @@ public class Position {
 		this.session = session;
 	}
 
+	public Long getId() {
+		return id;
+	}
+
+	public void setId(Long id) {
+		this.id = id;
+	}
+
 	public long getTimestamp() {
 		return timestamp;
 	}

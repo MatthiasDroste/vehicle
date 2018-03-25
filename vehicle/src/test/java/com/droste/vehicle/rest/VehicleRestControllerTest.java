@@ -10,6 +10,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -22,6 +23,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,6 +170,28 @@ public class VehicleRestControllerTest {
 		assertThat(positions.size(), is(2));
 		assertThat(positions.get(0).getTimestamp(), is(testPosition.getTimestamp()));
 		assertThat(positions.get(1).getTimestamp(), is(OLDEST));
+	}
+
+	/**
+	 * get a specific position (return value of postPosition()), careful, the id
+	 * after position is its timestamp!
+	 */
+	@Test
+	public void getNewlyCreatedPosition() throws Exception {
+		final int heading = 291;
+		Position testPosition2 = new Position(OLDEST, 48.1167D, 11.5394D, heading,
+				this.sessionRepository.findOne(SESSION_ID));
+		String content = json(testPosition2);
+		String locationHeader = this.mockMvc
+				.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID + "/position").contentType(contentType)
+						.content(content))
+				.andExpect(status().isCreated()).andReturn().getResponse().getHeader("location");
+		assertTrue(
+				locationHeader.startsWith("http://localhost/vehicle/" + VIN + "/session/" + SESSION_ID + "/position/"));
+		
+		String positionUrl = StringUtils.substringAfter(locationHeader, "localhost");
+		mockMvc.perform(get(positionUrl)).andExpect(status().isOk()).andExpect(content().contentType(contentType))
+				.andExpect(jsonPath("$.timestamp", is(OLDEST))).andExpect(jsonPath("$.heading", is(heading)));
 	}
 
 	/**

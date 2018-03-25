@@ -62,6 +62,16 @@ public class VehicleRestController {
 	}
 
 	/**
+	 * get a specific position (return value of postPosition()), careful, the id
+	 * after position is its timestamp!
+	 */
+	@GetMapping("/vehicle/{vehicleId}/session/{sessionId}/position/{timestamp}")
+	public Position getPosition(@PathVariable String vehicleId, @PathVariable String sessionId,
+			@PathVariable Long timestamp) {
+		return positionRepository.findBySessionSessionIdAndTimestamp(sessionId, timestamp);
+	}
+
+	/**
 	 * add a new position <br>
 	 * new vehicles or sessions are created on the fly
 	 */
