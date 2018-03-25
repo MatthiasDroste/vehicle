@@ -62,5 +62,9 @@ Example:
 The app contains the default config for swagger, the UI allows you to explore the API:
 http://localhost:8080/swagger-ui.html#/
 
+## Kudos
+I started the project based on this excellent tutorial by spring:
+https://spring.io/guides/tutorials/bookmarks/
+
 
 
