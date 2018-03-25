@@ -27,7 +27,6 @@ import org.springframework.mock.http.MockHttpOutputMessage;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.context.web.WebAppConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.droste.vehicle.VehicleApplication;
@@ -57,9 +56,6 @@ public class SessionRestControllerTest {
 
 	private MockMvc mockMvc;
 
-	@SuppressWarnings("rawtypes")
-	private HttpMessageConverter mappingJackson2HttpMessageConverter;
-
 	private Position testPosition;
 	private Vehicle testVehicle;
 
@@ -75,6 +71,9 @@ public class SessionRestControllerTest {
 	@Autowired
 	private VehicleRepository vehicleRepository;
 
+	@SuppressWarnings("rawtypes")
+	private HttpMessageConverter mappingJackson2HttpMessageConverter;
+
 	@Autowired
 	void setConverters(HttpMessageConverter<?>[] converters) {
 
@@ -84,6 +83,7 @@ public class SessionRestControllerTest {
 		assertNotNull("the JSON message converter must not be null", this.mappingJackson2HttpMessageConverter);
 	}
 
+	/** always have one vehicle with 2 sessions and 3 positions in the db */
 	@Before
 	public void setup() throws Exception {
 		this.mockMvc = webAppContextSetup(webApplicationContext).build();
@@ -144,9 +144,7 @@ public class SessionRestControllerTest {
 
 	@Test
 	public void getPositionsOfNonExistingSession() throws Exception {
-		MvcResult result = mockMvc.perform(get("/vehicle/session/" + "nonsenseId")).andExpect(status().isNotFound())
-				.andReturn();
-		System.out.println("Positions of Sessions------------" + result.getResponse().getContentAsString());
+		mockMvc.perform(get("/vehicle/session/" + "nonsenseId")).andExpect(status().isNotFound());
 	}
 
 	@SuppressWarnings("unchecked")

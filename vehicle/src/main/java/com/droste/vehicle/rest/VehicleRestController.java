@@ -66,7 +66,7 @@ public class VehicleRestController {
 	 * new vehicles or sessions are created on the fly
 	 */
 	@PostMapping("/vehicle/{vehicleId}/session/{sessionId}/position")
-	ResponseEntity<?> add(@PathVariable String vehicleId, @PathVariable String sessionId,
+	public ResponseEntity<?> add(@PathVariable String vehicleId, @PathVariable String sessionId,
 			@RequestBody Position position) {
 		Vehicle vehicle = findOrCreateVehicleAndSession(vehicleId, sessionId);
 		Session session = vehicle.getSession(sessionId);

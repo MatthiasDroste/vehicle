@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SessionRepository extends JpaRepository<Session, String>{
-	//findbyID already in superclass
 	
 	/** get all sessions of a vehicle in correct ordering */
 	List<Session> findAllByVehicleOrderBySessionIdAsc(Vehicle vehicle);

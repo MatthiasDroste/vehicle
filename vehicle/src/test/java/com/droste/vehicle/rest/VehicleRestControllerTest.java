@@ -80,6 +80,7 @@ public class VehicleRestControllerTest {
 	@Autowired
 	private PositionRepository positionRepository;
 
+	/** always have 1 vehicle with 1 session and 1 position in the db */
 	@Before
 	public void setup() throws Exception {
 		this.mockMvc = webAppContextSetup(webApplicationContext).build();
@@ -130,15 +131,15 @@ public class VehicleRestControllerTest {
 		String content = json(testPosition);
 		this.mockMvc.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID + "/position").contentType(contentType)
 				.content(content)).andExpect(status().isConflict());
-		
+
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
 		assertThat(vehicle.getId(), is(VIN));
 		assertThat(vehicle.getSessions().size(), is(1));
-		
+
 		Session session = vehicle.getSessions().get(0);
 		assertThat(session.getSessionId(), is(SESSION_ID));
 		assertThat(session.getTimestamp(), is(testPosition.getTimestamp()));
-		
+
 		List<Position> positions = this.positionRepository.findAllBySessionSessionId(SESSION_ID);
 		assertThat(positions.size(), is(1));
 		assertThat(positions.get(0).getTimestamp(), is(testPosition.getTimestamp()));
@@ -158,11 +159,11 @@ public class VehicleRestControllerTest {
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
 		assertThat(vehicle.getId(), is(VIN));
 		assertThat(vehicle.getSessions().size(), is(1));
-		
+
 		Session session = vehicle.getSessions().get(0);
 		assertThat(session.getSessionId(), is(SESSION_ID));
 		assertThat(session.getTimestamp(), is(testPosition.getTimestamp()));
-		
+
 		List<Position> positions = this.positionRepository.findAllBySessionSessionId(SESSION_ID);
 		assertThat(positions.size(), is(2));
 		assertThat(positions.get(0).getTimestamp(), is(testPosition.getTimestamp()));
@@ -182,11 +183,11 @@ public class VehicleRestControllerTest {
 
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN2);
 		assertThat(vehicle.getSessions().size(), is(1));
-		
+
 		Session session = vehicle.getSessions().get(0);
 		assertEquals(session.getSessionId(), SESSION_ID2);
 		assertEquals(session.getTimestamp(), OLDEST);
-		
+
 		// get Positions only on explicit request - performance!
 		List<Position> positions = positionRepository.findAllBySessionSessionId(SESSION_ID2);
 		assertEquals(positions.size(), 1);
@@ -203,18 +204,19 @@ public class VehicleRestControllerTest {
 		String content = json(testPosition2);
 		this.mockMvc.perform(post("/vehicle/" + VIN + "/session/" + SESSION_ID2 + "/position").contentType(contentType)
 				.content(content)).andExpect(status().isCreated());
-		
+
 		Vehicle vehicle = this.vehicleRepository.findOne(VIN);
 		assertEquals(vehicle.getId(), VIN);
 		assertEquals(vehicle.getSessions().size(), 2);
-		
+
 		Session session = vehicle.getSessions().get(1);
 		assertEquals(session.getSessionId(), SESSION_ID2);
 		assertEquals(session.getTimestamp(), OLDEST);
-		
+
 		List<Position> positions = positionRepository.findAllBySessionSessionId(SESSION_ID2);
 		assertEquals(positions.size(), 1);
 		assertEquals(positions.get(0).getTimestamp(), OLDEST);
+
 	}
 
 	@SuppressWarnings("unchecked")

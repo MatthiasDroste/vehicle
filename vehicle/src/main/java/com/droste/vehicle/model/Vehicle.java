@@ -67,40 +67,4 @@ public class Vehicle {
 	private Vehicle() {
 	}
 
-	@Override
-	public String toString() {
-		return "Vehicle [vin=" + vin + ", sessions=" + sessions + "]";
-	}
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((sessions == null) ? 0 : sessions.hashCode());
-		result = prime * result + ((vin == null) ? 0 : vin.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Vehicle other = (Vehicle) obj;
-		if (sessions == null) {
-			if (other.sessions != null)
-				return false;
-		} else if (!sessions.equals(other.sessions))
-			return false;
-		if (vin == null) {
-			if (other.vin != null)
-				return false;
-		} else if (!vin.equals(other.vin))
-			return false;
-		return true;
-	}
-
 }
